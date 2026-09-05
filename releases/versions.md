@@ -3,6 +3,11 @@
 Each entry corresponds to a tarball backed up in this directory:
 `indexed_parallel_lines_pi-<version>-msvc-x86-wx32-10.0.26200-MSVC.tar.gz`
 
+## 0.0.18.0
+
+- "Edit Distance..." now works the same way as "Repick Distance on Chart": if a line is already selected it edits that one directly, but if nothing is selected it arms a click-to-pick mode instead of showing an error - click any drawn indexed line on the chart to choose which one to edit its distance.
+- The list's right-click context menu now includes "Repick Distance on Chart" and "Delete Selected" alongside the existing "Edit Distance..." and "Rename...", reusing the exact same handlers as the toolbar buttons - so the delete confirmation prompt and repick's cancel-restores-original-line behavior both apply from the context menu too.
+
 ## 0.0.17.0
 
 - Fixed "Repick Distance on Chart" losing the line entirely if the pick was cancelled (Escape) after it had already been started: the line was deleted immediately when the repick began, and cancelling never put it back. It's now kept in a backup and only actually removed once a new distance is confirmed by clicking the chart; cancelling (via Escape, or the reference leg vanishing mid-pick because its route/waypoint was deleted) now restores it exactly as it was.

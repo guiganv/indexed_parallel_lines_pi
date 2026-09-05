@@ -85,7 +85,7 @@ public:
     bool RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *vp);
 
 private:
-    enum PickState { PICK_NONE, PICK_LEG, PICK_OFFSET, PICK_REPICK_TARGET };
+    enum PickState { PICK_NONE, PICK_LEG, PICK_OFFSET, PICK_REPICK_TARGET, PICK_EDIT_TARGET };
 
     void OnDialogClose(wxCloseEvent &event);
     void OnNewIndexedLineButton(wxCommandEvent &event);
@@ -106,7 +106,7 @@ private:
     void OnListItemChecked(wxListEvent &event);
     void OnListItemUnchecked(wxListEvent &event);
     void OnRouteFilterChoice(wxCommandEvent &event);
-    void PromptChangeDistance(void);
+    void PromptChangeDistanceForIndex(size_t lineIndex);
     void PromptRename(void);
     void BeginRepick(size_t lineIndex);
     void CancelPick(void);

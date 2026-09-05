@@ -475,17 +475,34 @@ void indexed_parallel_lines_pi::OnListItemRightClick(wxListEvent &event)
 
     wxMenu menu;
     int idEdit = wxWindow::NewControlId();
+    int idRepick = wxWindow::NewControlId();
     int idRename = wxWindow::NewControlId();
+    int idDelete = wxWindow::NewControlId();
     menu.Append(idEdit, _("Edit Distance..."));
+    menu.Append(idRepick, _("Repick Distance on Chart"));
     menu.Append(idRename, _("Rename..."));
+    menu.AppendSeparator();
+    menu.Append(idDelete, _("Delete Selected"));
     menu.Bind(wxEVT_MENU, &indexed_parallel_lines_pi::OnChangeDistanceButton, this, idEdit);
+    menu.Bind(wxEVT_MENU, &indexed_parallel_lines_pi::OnRepickDistanceButton, this, idRepick);
     menu.Bind(wxEVT_MENU, &indexed_parallel_lines_pi::OnRenameButton, this, idRename);
+    menu.Bind(wxEVT_MENU, &indexed_parallel_lines_pi::OnDeleteIndexedLineButton, this, idDelete);
     m_pListCtrl->PopupMenu(&menu);
 }
 
 void indexed_parallel_lines_pi::OnChangeDistanceButton(wxCommandEvent &event)
 {
-    PromptChangeDistance();
+    if (m_pickState != PICK_NONE) CancelPick();
+
+    if (m_selectedLineIndex >= 0 && m_selectedLineIndex < (int)m_indexLines.size()) {
+        PromptChangeDistanceForIndex((size_t)m_selectedLineIndex);
+        return;
+    }
+
+    // No line selected yet - let the user click one on the chart to choose
+    // which indexed line to edit, instead of requiring a prior selection.
+    m_pickState = PICK_EDIT_TARGET;
+    UpdatePickStatusLabel();
 }
 
 void indexed_parallel_lines_pi::OnRenameButton(wxCommandEvent &event)
@@ -511,15 +528,11 @@ void indexed_parallel_lines_pi::OnListItemUnchecked(wxListEvent &event)
     if (GetOCPNCanvasWindow()) RequestRefresh(GetOCPNCanvasWindow());
 }
 
-void indexed_parallel_lines_pi::PromptChangeDistance(void)
+void indexed_parallel_lines_pi::PromptChangeDistanceForIndex(size_t lineIndex)
 {
-    if (m_selectedLineIndex < 0 || m_selectedLineIndex >= (int)m_indexLines.size()) {
-        wxMessageBox(_("Select an indexed line first."),
-                     _("Indexed Parallel Navigation"), wxOK | wxICON_INFORMATION);
-        return;
-    }
+    if (lineIndex >= m_indexLines.size()) return;
 
-    IndexedLine &line = m_indexLines[m_selectedLineIndex];
+    IndexedLine &line = m_indexLines[lineIndex];
     wxString input = wxGetTextFromUser(
         _("New offset distance from the reference leg, in nautical miles:"),
         _("Edit Distance"), wxString::Format(_T("%.2f"), line.offsetNM),
@@ -585,6 +598,8 @@ void indexed_parallel_lines_pi::UpdatePickStatusLabel(void)
             text = _("Picking reference leg on chart... (Esc to cancel)");
         } else if (m_pickState == PICK_REPICK_TARGET) {
             text = _("Click the indexed line to repick... (Esc to cancel)");
+        } else if (m_pickState == PICK_EDIT_TARGET) {
+            text = _("Click the indexed line to edit its distance... (Esc to cancel)");
         } else if (m_pendingIsPerpendicular) {
             text = _("Picking crossing point and length on chart... (Esc to cancel)");
         } else {
@@ -975,6 +990,24 @@ bool indexed_parallel_lines_pi::MouseEventHook(wxMouseEvent &event)
             return true;
         }
         BeginRepick(idx);
+        return true;
+    }
+
+    if (m_pickState == PICK_EDIT_TARGET) {
+        size_t idx;
+        if (!FindLineNear(m_cursor_lat, m_cursor_lon, &idx)) {
+            wxMessageBox(_("No indexed line found near that point"),
+                         _("Indexed Parallel Navigation"), wxOK | wxICON_INFORMATION);
+            m_pickState = PICK_NONE;
+            UpdatePickStatusLabel();
+            return true;
+        }
+        m_pickState = PICK_NONE;
+        UpdatePickStatusLabel();
+        m_selectedLineIndex = (int)idx;
+        PromptChangeDistanceForIndex(idx);
+        RefreshList();
+        if (GetOCPNCanvasWindow()) RequestRefresh(GetOCPNCanvasWindow());
         return true;
     }
 
