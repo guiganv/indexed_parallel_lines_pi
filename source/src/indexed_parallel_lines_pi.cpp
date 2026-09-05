@@ -130,6 +130,7 @@ indexed_parallel_lines_pi::indexed_parallel_lines_pi(void *ppimgr)
     m_cursor_lon = 0.0;
     m_pickState = PICK_NONE;
     m_pendingIsPerpendicular = false;
+    m_repickInProgress = false;
     m_haveViewport = false;
     m_selectedLineIndex = -1;
     m_hoveredLineIndex = -1;
@@ -359,6 +360,7 @@ void indexed_parallel_lines_pi::OnToolbarToolCallback(int id)
 
 void indexed_parallel_lines_pi::OnNewIndexedLineButton(wxCommandEvent &event)
 {
+    if (m_pickState != PICK_NONE) CancelPick();
     m_pending = IndexedLine();
     m_pendingIsPerpendicular = false;
     m_pickState = PICK_LEG;
@@ -367,6 +369,7 @@ void indexed_parallel_lines_pi::OnNewIndexedLineButton(wxCommandEvent &event)
 
 void indexed_parallel_lines_pi::OnNewPerpendicularLineButton(wxCommandEvent &event)
 {
+    if (m_pickState != PICK_NONE) CancelPick();
     m_pending = IndexedLine();
     m_pendingIsPerpendicular = true;
     m_pickState = PICK_LEG;
@@ -375,16 +378,30 @@ void indexed_parallel_lines_pi::OnNewPerpendicularLineButton(wxCommandEvent &eve
 
 void indexed_parallel_lines_pi::OnRepickDistanceButton(wxCommandEvent &event)
 {
-    if (m_selectedLineIndex < 0 || m_selectedLineIndex >= (int)m_indexLines.size()) {
-        wxMessageBox(_("Select an indexed line first."),
-                     _("Indexed Parallel Navigation"), wxOK | wxICON_INFORMATION);
+    if (m_pickState != PICK_NONE) CancelPick();
+
+    if (m_selectedLineIndex >= 0 && m_selectedLineIndex < (int)m_indexLines.size()) {
+        BeginRepick((size_t)m_selectedLineIndex);
         return;
     }
 
+    // No line selected yet - let the user click one on the chart to choose
+    // which indexed line to repick, instead of requiring a prior selection.
+    m_pickState = PICK_REPICK_TARGET;
+    UpdatePickStatusLabel();
+}
+
+void indexed_parallel_lines_pi::BeginRepick(size_t lineIndex)
+{
     // Reuse the same reference leg, but let the user click the chart again to
-    // set a new distance: delete the old line and jump straight into the
+    // set a new distance: remove the old line and jump straight into the
     // offset-pick step (skipping leg selection, since it's already known).
-    const IndexedLine &line = m_indexLines[m_selectedLineIndex];
+    // The removed line is kept in m_repickBackup so it can be restored if
+    // the repick is cancelled instead of confirmed.
+    const IndexedLine &line = m_indexLines[lineIndex];
+    m_repickBackup = line;
+    m_repickInProgress = true;
+
     m_pending = IndexedLine();
     m_pending.name = line.name;
     m_pending.routeGUID = line.routeGUID;
@@ -392,7 +409,7 @@ void indexed_parallel_lines_pi::OnRepickDistanceButton(wxCommandEvent &event)
     m_pending.wp1GUID = line.wp1GUID;
     m_pendingIsPerpendicular = line.isPerpendicular;
 
-    m_indexLines.erase(m_indexLines.begin() + m_selectedLineIndex);
+    m_indexLines.erase(m_indexLines.begin() + lineIndex);
     m_selectedLineIndex = -1;
     m_pickState = PICK_OFFSET;
     UpdatePickStatusLabel();
@@ -542,6 +559,13 @@ void indexed_parallel_lines_pi::PromptRename(void)
 
 void indexed_parallel_lines_pi::CancelPick(void)
 {
+    if (m_repickInProgress) {
+        // Cancelling a repick must not lose the line it was repicking -
+        // restore it exactly as it was before the repick started.
+        m_indexLines.push_back(m_repickBackup);
+        m_repickInProgress = false;
+        RefreshList();
+    }
     m_pickState = PICK_NONE;
     m_pending = IndexedLine();
     UpdatePickStatusLabel();
@@ -559,6 +583,8 @@ void indexed_parallel_lines_pi::UpdatePickStatusLabel(void)
         wxString text;
         if (m_pickState == PICK_LEG) {
             text = _("Picking reference leg on chart... (Esc to cancel)");
+        } else if (m_pickState == PICK_REPICK_TARGET) {
+            text = _("Click the indexed line to repick... (Esc to cancel)");
         } else if (m_pendingIsPerpendicular) {
             text = _("Picking crossing point and length on chart... (Esc to cancel)");
         } else {
@@ -939,6 +965,19 @@ bool indexed_parallel_lines_pi::MouseEventHook(wxMouseEvent &event)
 
     if (!event.LeftDown()) return false;
 
+    if (m_pickState == PICK_REPICK_TARGET) {
+        size_t idx;
+        if (!FindLineNear(m_cursor_lat, m_cursor_lon, &idx)) {
+            wxMessageBox(_("No indexed line found near that point"),
+                         _("Indexed Parallel Navigation"), wxOK | wxICON_INFORMATION);
+            m_pickState = PICK_NONE;
+            UpdatePickStatusLabel();
+            return true;
+        }
+        BeginRepick(idx);
+        return true;
+    }
+
     if (m_pickState == PICK_LEG) {
         wxString routeGUID, wp0GUID, wp1GUID;
         if (!FindNearestLeg(m_cursor_lat, m_cursor_lon, &routeGUID, &wp0GUID,
@@ -962,9 +1001,10 @@ bool indexed_parallel_lines_pi::MouseEventHook(wxMouseEvent &event)
         if (!GetLiveLeg(m_pending.routeGUID, m_pending.wp0GUID,
                          m_pending.wp1GUID, &lat0, &lon0, &lat1, &lon1,
                          &course, &legDist, NULL)) {
-            // The reference leg vanished (route/waypoint deleted) while picking.
-            m_pickState = PICK_NONE;
-            UpdatePickStatusLabel();
+            // The reference leg vanished (route/waypoint deleted) while
+            // picking - cancel via CancelPick() so a repick-in-progress
+            // restores its original line instead of losing it.
+            CancelPick();
             return true;
         }
 
@@ -994,6 +1034,7 @@ bool indexed_parallel_lines_pi::MouseEventHook(wxMouseEvent &event)
 
         m_indexLines.push_back(m_pending);
         m_pickState = PICK_NONE;
+        m_repickInProgress = false;  // committed - nothing left to restore
         UpdatePickStatusLabel();
 
         RefreshList();

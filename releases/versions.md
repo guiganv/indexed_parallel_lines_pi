@@ -3,6 +3,13 @@
 Each entry corresponds to a tarball backed up in this directory:
 `indexed_parallel_lines_pi-<version>-msvc-x86-wx32-10.0.26200-MSVC.tar.gz`
 
+## 0.0.17.0
+
+- Fixed "Repick Distance on Chart" losing the line entirely if the pick was cancelled (Escape) after it had already been started: the line was deleted immediately when the repick began, and cancelling never put it back. It's now kept in a backup and only actually removed once a new distance is confirmed by clicking the chart; cancelling (via Escape, or the reference leg vanishing mid-pick because its route/waypoint was deleted) now restores it exactly as it was.
+- "Repick Distance on Chart" no longer requires pre-selecting a line via the manager list first: if nothing is selected when the button is pressed, it now arms a click-to-pick mode - click any drawn indexed line on the chart to choose which one to repick. If a line is already selected, pressing the button still repicks that one directly.
+- Starting a new pick ("New Indexed Line", "New Perpendicular Line", or "Repick Distance on Chart") while another pick was already in progress used to silently abandon it (and could orphan a repick's already-removed line); it now cleanly cancels the previous pick first, restoring anything that needed restoring.
+- First build produced from the restructured repo layout (`source/` + `releases/`).
+
 ## 0.0.16.0
 
 - Updated plugin metadata to replace leftover values from the `testplugin_pi` template this plugin was originally cloned from: author is now "Guilherme Vieira" (was "Jon Gough"), and info-url now points to the plugin's own repo instead of an unrelated OpenCPN wiki page for a different plugin.
