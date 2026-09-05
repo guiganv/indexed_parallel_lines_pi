@@ -2,6 +2,11 @@
 
 An [OpenCPN](https://opencpn.org/) plugin for planning **indexed parallel navigation** — lines offset from a route leg (or crossing it perpendicularly) by a chosen distance, drawn live on the chart and tracked automatically as the underlying route is edited.
 
+This repository is split into two parts:
+
+- [`source/`](source/) — the plugin's source code. See [`source/README.md`](source/README.md) for how to build it on Windows, Linux, and macOS.
+- [`releases/`](releases/) — prebuilt, ready-to-import plugin packages for Windows. See [`releases/README.md`](releases/README.md) for how to install one, and [`releases/versions.md`](releases/versions.md) for the changelog.
+
 ## Features
 
 - **Manager window** listing every indexed line, with the route it belongs to, its name, live course, offset distance, and side (Port/Starboard, or Ahead/Astern for perpendicular lines).
@@ -16,24 +21,6 @@ An [OpenCPN](https://opencpn.org/) plugin for planning **indexed parallel naviga
 - **GPX export/import** — export a route and its indexed lines to a standard GPX 1.1 file (indexed lines ride along as a custom extension block) to share a navigation plan with another OpenCPN user, or back it up separately from the full OpenCPN config. Importing matches an existing route by name/waypoints when possible, otherwise recreates it; duplicate lines are skipped and reported.
 - Indexed lines persist across OpenCPN restarts.
 
-## Installing
-
-Download the tarball for your platform from a [release](https://github.com/guiganv/indexed_parallel_lines_pi/releases) (or build it yourself, see below), then in OpenCPN: **Options → Plugins → Import Plugin...** and select the `.tar.gz`. Restart OpenCPN if prompted.
-
-## Building from source
-
-Requires a working OpenCPN plugin build environment (CMake, a matching wxWidgets build, and a C++ toolchain for your platform).
-
-```
-git clone https://github.com/guiganv/indexed_parallel_lines_pi.git
-cd indexed_parallel_lines_pi
-mkdir build && cd build
-cmake -T v143 -A Win32 ..
-cmake --build . --target package --config Release
-```
-
-On Windows, `run_build.bat` wraps the above with the environment setup (VsDevCmd, wxWidgets/NSIS paths) used for this repo's own builds. The `package` target produces a `.tar.gz` plus a sibling `.xml` metadata file; OpenCPN's plugin manager expects the metadata copied into the tarball root as `metadata.xml` before it's importable.
-
 ## License
 
-GPLv3 or later — see [`cmake/gpl.txt`](cmake/gpl.txt).
+GPLv3 or later — see [`LICENSE`](LICENSE).
