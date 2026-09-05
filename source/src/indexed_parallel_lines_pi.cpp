@@ -533,20 +533,67 @@ void indexed_parallel_lines_pi::PromptChangeDistanceForIndex(size_t lineIndex)
     if (lineIndex >= m_indexLines.size()) return;
 
     IndexedLine &line = m_indexLines[lineIndex];
-    wxString input = wxGetTextFromUser(
-        _("New offset distance from the reference leg, in nautical miles:"),
-        _("Edit Distance"), wxString::Format(_T("%.2f"), line.offsetNM),
-        m_pDialog);
-    if (input.IsEmpty()) return;
 
-    double newOffset;
-    if (!input.ToDouble(&newOffset) || newOffset < 0.0) {
-        wxMessageBox(_("Enter a valid, non-negative distance in nautical miles."),
-                     _("Indexed Parallel Navigation"), wxOK | wxICON_ERROR);
-        return;
+    if (line.isPerpendicular) {
+        // A perpendicular line has two independent distances - where along
+        // the leg it crosses, and how far it extends to each side - so both
+        // need their own field rather than a single "offset" prompt.
+        wxDialog dlg(m_pDialog, wxID_ANY, _("Edit Distance"), wxDefaultPosition,
+                     wxDefaultSize, wxDEFAULT_DIALOG_STYLE);
+
+        wxBoxSizer *outer = new wxBoxSizer(wxVERTICAL);
+        wxFlexGridSizer *grid = new wxFlexGridSizer(2, 8, 10);
+        grid->AddGrowableCol(1);
+
+        grid->Add(new wxStaticText(&dlg, wxID_ANY,
+                                    _("Along-track position from leg start, nm\n(may be negative, or beyond the leg's end):")),
+                  0, wxALIGN_CENTER_VERTICAL);
+        wxTextCtrl *alongCtrl = new wxTextCtrl(
+            &dlg, wxID_ANY, wxString::Format(_T("%.2f"), line.alongTrackNM));
+        grid->Add(alongCtrl, 1, wxEXPAND);
+
+        grid->Add(new wxStaticText(&dlg, wxID_ANY,
+                                    _("Half-length - extends this far to each side, nm:")),
+                  0, wxALIGN_CENTER_VERTICAL);
+        wxTextCtrl *lengthCtrl = new wxTextCtrl(
+            &dlg, wxID_ANY, wxString::Format(_T("%.2f"), line.offsetNM));
+        grid->Add(lengthCtrl, 1, wxEXPAND);
+
+        outer->Add(grid, 1, wxALL | wxEXPAND, 10);
+        outer->Add(dlg.CreateButtonSizer(wxOK | wxCANCEL), 0, wxALIGN_CENTER | wxALL, 5);
+        dlg.SetSizerAndFit(outer);
+
+        if (dlg.ShowModal() != wxID_OK) return;
+
+        double alongTrack, halfLength;
+        bool alongOk = alongCtrl->GetValue().ToDouble(&alongTrack);
+        bool lengthOk = lengthCtrl->GetValue().ToDouble(&halfLength) && halfLength >= 0.0;
+        if (!alongOk || !lengthOk) {
+            wxMessageBox(_("Enter a valid along-track position and a valid, "
+                            "non-negative half-length, both in nautical miles."),
+                         _("Indexed Parallel Navigation"), wxOK | wxICON_ERROR);
+            return;
+        }
+
+        line.alongTrackNM = alongTrack;
+        line.offsetNM = halfLength;
+    } else {
+        wxString input = wxGetTextFromUser(
+            _("New offset distance from the reference leg, in nautical miles:"),
+            _("Edit Distance"), wxString::Format(_T("%.2f"), line.offsetNM),
+            m_pDialog);
+        if (input.IsEmpty()) return;
+
+        double newOffset;
+        if (!input.ToDouble(&newOffset) || newOffset < 0.0) {
+            wxMessageBox(_("Enter a valid, non-negative distance in nautical miles."),
+                         _("Indexed Parallel Navigation"), wxOK | wxICON_ERROR);
+            return;
+        }
+
+        line.offsetNM = newOffset;
     }
 
-    line.offsetNM = newOffset;
     SaveIndexedLines();
     RefreshList();
     if (GetOCPNCanvasWindow()) RequestRefresh(GetOCPNCanvasWindow());

@@ -3,6 +3,10 @@
 Each entry corresponds to a tarball backed up in this directory:
 `indexed_parallel_lines_pi-<version>-msvc-x86-wx32-10.0.26200-MSVC.tar.gz`
 
+## 0.0.19.0
+
+- Fixed "Edit Distance..." for perpendicular lines actually changing the line's length (half-length, `offsetNM`) instead of its distance along the reference leg. A perpendicular line has two independent distances - where along the leg it crosses (`alongTrackNM`) and how far it extends to each side (half-length) - so editing one now shows both as separate fields in the dialog rather than a single ambiguous "distance" prompt. Parallel lines are unaffected and still use the single offset-distance prompt.
+
 ## 0.0.18.0
 
 - "Edit Distance..." now works the same way as "Repick Distance on Chart": if a line is already selected it edits that one directly, but if nothing is selected it arms a click-to-pick mode instead of showing an error - click any drawn indexed line on the chart to choose which one to edit its distance.
