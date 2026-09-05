@@ -952,18 +952,28 @@ void indexed_parallel_lines_pi::RefreshList(void)
         } else {
             SetItemIfChanged(idx, 2, _("route leg not found"));
         }
-        SetItemIfChanged(idx, 3, wxString::Format(_T("%.2f nm"), line.offsetNM));
         if (line.isPerpendicular) {
             wxString posLabel = _("Perpendicular");
+            // The along-track distance is measured from the leg's start,
+            // but once the crossing point falls beyond either end of the
+            // leg, showing that raw distance is misleading (it grows with
+            // the leg's own length, not just how far past the end the
+            // crossing is) - show only the exceeding distance beyond the
+            // relevant end instead.
+            double displayDistance = line.alongTrackNM;
             if (legFound) {
                 bool ahead = line.alongTrackNM > legDist;
                 bool astern = line.alongTrackNM < 0.0;
+                if (ahead) displayDistance = line.alongTrackNM - legDist;
+                else if (astern) displayDistance = -line.alongTrackNM;
                 if (reversedInRoute) std::swap(ahead, astern);
                 if (ahead) posLabel = _("Ahead");
                 else if (astern) posLabel = _("Astern");
             }
+            SetItemIfChanged(idx, 3, wxString::Format(_T("%.2f nm"), displayDistance));
             SetItemIfChanged(idx, 4, posLabel);
         } else {
+            SetItemIfChanged(idx, 3, wxString::Format(_T("%.2f nm"), line.offsetNM));
             bool displaySide = reversedInRoute ? !line.starboardSide : line.starboardSide;
             SetItemIfChanged(idx, 4, displaySide ? _("Starboard") : _("Port"));
         }
@@ -1397,19 +1407,22 @@ void indexed_parallel_lines_pi::BuildHoverInfoLines(const IndexedLine &line,
         outLines->Add(wxString::Format(_T("%s: %03.0f°"), _("Course").c_str(), displayCourse));
     }
 
-    outLines->Add(wxString::Format(_("Offset: %.2f nm"), line.offsetNM));
-
     if (line.isPerpendicular) {
         wxString posLabel = _("Perpendicular");
+        double displayDistance = line.alongTrackNM;
         if (legFound) {
             bool ahead = line.alongTrackNM > legDist;
             bool astern = line.alongTrackNM < 0.0;
+            if (ahead) displayDistance = line.alongTrackNM - legDist;
+            else if (astern) displayDistance = -line.alongTrackNM;
             if (reversedInRoute) std::swap(ahead, astern);
             if (ahead) posLabel = _("Ahead");
             else if (astern) posLabel = _("Astern");
         }
+        outLines->Add(wxString::Format(_("Offset: %.2f nm"), displayDistance));
         outLines->Add(posLabel);
     } else {
+        outLines->Add(wxString::Format(_("Offset: %.2f nm"), line.offsetNM));
         bool displaySide = reversedInRoute ? !line.starboardSide : line.starboardSide;
         outLines->Add(displaySide ? _("Starboard") : _("Port"));
     }

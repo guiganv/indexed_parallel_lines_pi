@@ -3,6 +3,10 @@
 Each entry corresponds to a tarball backed up in this directory:
 `indexed_parallel_lines_pi-<version>-msvc-x86-wx32-10.0.26200-MSVC.tar.gz`
 
+## 0.0.20.0
+
+- Fixed the manager list's "Offset" column and the on-chart hover info box showing the wrong value for perpendicular lines: they displayed the half-length (`offsetNM`) there too, same as the Edit Distance bug fixed in 0.0.19.0. Both now show the along-track crossing distance instead, and once that crossing point falls beyond either end of the leg (labeled "Ahead"/"Astern"), only the exceeding distance past that end is shown - not the raw distance from the leg's start, which would otherwise grow with the leg's own length rather than reflecting how far past the end the line actually is.
+
 ## 0.0.19.0
 
 - Fixed "Edit Distance..." for perpendicular lines actually changing the line's length (half-length, `offsetNM`) instead of its distance along the reference leg. A perpendicular line has two independent distances - where along the leg it crosses (`alongTrackNM`) and how far it extends to each side (half-length) - so editing one now shows both as separate fields in the dialog rather than a single ambiguous "distance" prompt. Parallel lines are unaffected and still use the single offset-distance prompt.
