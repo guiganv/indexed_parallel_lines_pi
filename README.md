@@ -16,8 +16,6 @@ An [OpenCPN](https://opencpn.org/) plugin for planning **indexed parallel naviga
 - **GPX export/import** — export a route and its indexed lines to a standard GPX 1.1 file (indexed lines ride along as a custom extension block) to share a navigation plan with another OpenCPN user, or back it up separately from the full OpenCPN config. Importing matches an existing route by name/waypoints when possible, otherwise recreates it; duplicate lines are skipped and reported.
 - Indexed lines persist across OpenCPN restarts.
 
-See [`Planned_Improvements.md`](Planned_Improvements.md) for what's next.
-
 ## Installing
 
 Download the tarball for your platform from a [release](https://github.com/guiganv/indexed_parallel_lines_pi/releases) (or build it yourself, see below), then in OpenCPN: **Options → Plugins → Import Plugin...** and select the `.tar.gz`. Restart OpenCPN if prompted.
